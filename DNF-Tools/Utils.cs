@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace DNF_Tools.Utils
 {
@@ -184,11 +185,14 @@ namespace DNF_Tools.Utils
 
         private static readonly string[] _patches = new string[]
         {
-            
+            "a(其他补丁-角色定位)",
             "a(其他补丁-空中坐标)",
             "a(其他补丁-蓝冰翼喷射器)",
             "a(其他补丁-去失明、过图黑屏、死亡黑屏)",
             "a(其他补丁-透明血条)",
+            "a(其他补丁-隐藏名字)",
+            "a(角色补丁-红狗反和谐)",
+            "a(角色补丁-剑豪觉醒)",
             "a(超时空漩涡-便利补丁)",
             "a(泰波尔斯-暗能量优化)",
             "a(泰波尔斯-翅膀怪)",
@@ -197,6 +201,7 @@ namespace DNF_Tools.Utils
             "a(泰波尔斯-斗气释放)",
             "a(泰波尔斯-风阻优化)",
             "a(泰波尔斯-怪暗能量以及移动风优化)",
+            "a(泰波尔斯-破防提醒)",
             "a(泰波尔斯-切图优化)",
             "a(泰波尔斯-太空列车)",
             "a(泰波尔斯-终极优化)"
@@ -204,10 +209,14 @@ namespace DNF_Tools.Utils
 
         public static List<Patches> Check(string path)
         {
+            return CheckInstalled(path, _patches);
+        }
+
+        public static List<Patches> CheckInstalled(string path, string[] list)
+        {
             List<Patches> patches = new List<Patches>();
 
-
-            foreach (var file in _patches)
+            foreach (var file in list)
             {
                 if (File.Exists(System.IO.Path.Combine(path, "ImagePacks2", file + ".NPK")))
                 {
@@ -228,6 +237,23 @@ namespace DNF_Tools.Utils
 
             return patches;
         }
+
+        public static bool Install(Patches patch, string path)
+        {
+            try
+            {
+                Downloader.Download(System.IO.Path.Combine(path, "ImagePacks2"), patch.File);
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine("安装成功 ->\t[{0}]\t{1}", patch.Type, patch.Name);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("无法下载补丁 [{0}] -> 异常: {1}", patch.File, e.Message);
+                return false;
+            }
+        }
     }
 
     class Downloader
@@ -236,10 +262,31 @@ namespace DNF_Tools.Utils
 
         public static void Download(string path, string file)
         {
+            using (var completedEvent = new ManualResetEventSlim(false))
             using (var client = new WebClient())
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                client.DownloadFile(url_pref + file, System.IO.Path.Combine(path, file));
+
+                var text = Console.Title;
+
+                client.DownloadProgressChanged += (sender, e) =>
+                {
+                    Console.Title = "[" + e.ProgressPercentage.ToString() + "%]" + 
+                                    " " + "正在下载" + " " + file + " ..." + "         " + 
+                                    " " + e.BytesReceived / 1024 + "KB" + 
+                                    " " + "/" +
+                                    " " + e.TotalBytesToReceive / 1024 + "KB";
+                };
+
+                client.DownloadFileCompleted += (sender, args) =>
+                {
+                    Console.Title = text;
+                    completedEvent.Set();
+                };
+
+                client.DownloadFileAsync(new Uri(url_pref + file), System.IO.Path.Combine(path, file));
+                completedEvent.Wait();
+                Console.Title = text;
             }
         }
     }
@@ -339,4 +386,75 @@ namespace DNF_Tools.Utils
             }
         }
     }
+
+    class Interface
+    {
+        public class Luke
+        {
+            private static readonly string[] _patches = new string[]
+            {
+                "a(卢克之心界面-DT)",
+                "a(卢克之心界面-EZ8S)",
+                "a(卢克之心界面-宝石边框)",
+                "a(卢克之心界面-电流CD)",
+                "a(卢克之心界面-光能伤害字体)",
+                "a(卢克之心界面-绝望之塔)",
+                "a(卢克之心界面-深水女妖)",
+                "a(卢克之心界面-旋风)"
+            };
+
+            public static bool Install(string path)
+            {
+                bool ret = false;
+                foreach (var patch in Patch.CheckInstalled(path, _patches))
+                {
+                    if (Patch.Install(patch, path))
+                    {
+                        // flag
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+        }
+
+        public class Rosh
+        {
+            private static readonly string[] _patches = new string[]
+            {
+                "a(反重力界面-boss坐标)",
+                "a(反重力界面-登陆图)",
+                "a(反重力界面-翻牌评分1)",
+                "a(反重力界面-翻牌评分2)",
+                "a(反重力界面-挤频道)",
+                "a(反重力界面-角色光环)",
+                "a(反重力界面-聊天框)",
+                "a(反重力界面-毛线团)",
+                "a(反重力界面-冒险团字体1)",
+                "a(反重力界面-冒险团字体2)",
+                "a(反重力界面-赛丽亚)",
+                "a(反重力界面-赛丽亚房间)",
+                "a(反重力界面-选角特效)",
+                "a(反重力界面-选人界面)",
+                "a(反重力界面-血槽1)",
+                "a(反重力界面-血槽2)",
+                "a(反重力界面-装备等级框)"
+            };
+
+            public static bool Install(string path)
+            {
+                bool ret = false;
+                foreach (var patch in Patch.CheckInstalled(path, _patches))
+                {
+                    if (Patch.Install(patch, path))
+                    {
+                        // flag
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+        }
+    }
+
 }
